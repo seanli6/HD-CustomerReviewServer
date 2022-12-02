@@ -10,11 +10,11 @@ import ca.homedepot.customerreview.exception.ProductNotFoundException;
 import ca.homedepot.customerreview.exception.UserNotFoundException;
 import ca.homedepot.customerreview.forms.CustomerReviewForm;
 import ca.homedepot.customerreview.model.CustomerReviewModel;
-import ca.homedepot.customerreview.model.MyProductModel;
 import ca.homedepot.customerreview.model.ProductModel;
 import ca.homedepot.customerreview.model.*;
 import ca.homedepot.customerreview.service.CustomerReviewService;
 import ca.homedepot.customerreview.util.ServicesUtil;
+import io.swagger.annotations.ApiOperation;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -51,14 +51,13 @@ public class CustomerReviewController
 	@Autowired
 	private CustomerReviewService customerReviewService;
 	
-	@Autowired
-	private MyProductDao myProductDao;
-	
+	@ApiOperation(value = "Get all reviews under the product as well as summary info.", notes = "You can also filter the result by pass in the range of rating. Optional, the default range is 0-5"
+			+ "\nProduct Id is mandatory")
 	@GetMapping({ "products/summary/{productId}" })
 	public ProductSummary getProductSummary(@PathVariable final Long productId,
 			@RequestParam(required = false) final Double ratingFrom, @RequestParam(required = false) final Double ratingTo)
 	{
-		final ProductModel product = productDao.findOne(productId);
+		final ProductModel product = productDao.findById(productId).orElse(null);
 		if (product == null)
 		{
 			throw new ProductNotFoundException(productId);
@@ -85,12 +84,14 @@ public class CustomerReviewController
 		}
 		return productSummary;
 	}
-
+	
+	@ApiOperation(value = "Get all reviews under the product", notes = "You can also filter the result by pass in the range of rating. Optional, the default range is 0-5"
+			+ "\nProduct Id is mandatory")
 	@GetMapping({ "products/{productId:\\d+}/reviews" })
 	public List<CustomerReview> getReviews(@PathVariable final Long productId,
 			@RequestParam(required = false) final Double ratingFrom, @RequestParam(required = false) final Double ratingTo)
 	{
-		final ProductModel product = productDao.findOne(productId);
+		final ProductModel product = productDao.findById(productId).orElse(null);
 		if (product == null)
 		{
 			throw new ProductNotFoundException(productId);
@@ -103,7 +104,13 @@ public class CustomerReviewController
 		return ServicesUtil.filterReviews(ratingFrom, ratingTo, reviewsDomain);
        
 	}
-
+	
+	@ApiOperation(value = "Create review", notes = "Product and user has to be created first. Use the sample request body below: \n\n\n"
+			+ "{"
+			+ "\n&nbsp;&nbsp;   \"headline\": \"Overall this is a pretty good dishwasher\","
+			+ "\n&nbsp;&nbsp;   \"comment\": \"The reason I docked 1 star is mostly my fears that the motor has a bit of a ultra high pitched whir to it at times\","
+			+ "\n&nbsp;&nbsp;   \"rating\": \"3.6\""
+			+ "\n}")
 	@PostMapping({ "products/{productId:\\d+}/users/{userId:\\d+}/reviews" })
 	public CustomerReview createReview(@PathVariable final Long userId, @PathVariable final Long productId,
 			@RequestBody final CustomerReviewForm customerReviewForm)
@@ -111,13 +118,13 @@ public class CustomerReviewController
 		//Validate request body, if find any errors throw RequestValidationException with HttpStatus 422 UNPROCESSABLE_ENTITY
 		ServicesUtil.validateRequest(customerReviewForm);
 		
-		final ProductModel product = productDao.findOne(productId);
+		final ProductModel product = productDao.findById(productId).orElse(null);
 		if (product == null)
 		{
 			throw new ProductNotFoundException(productId);
 		}
 
-		final UserModel user = userDao.findOne(userId);
+		final UserModel user = userDao.findById(userId).orElse(null);
 		if (user == null)
 		{
 			throw new UserNotFoundException(userId);
@@ -131,6 +138,15 @@ public class CustomerReviewController
 		return mapper.map(customerReviewModel, CustomerReview.class);
 	}
 
+	/*
+	 * Create new product. Sample request body:
+	 * 
+	 * {
+		  "name": "Washer2"
+	   }
+	 * 
+	 */
+	@ApiOperation(value = "Create a new product", notes = "Cannot create review and user alone with product! Use the sample request body below: \n\n\n{\n&nbsp;&nbsp;   \"name\": \"washer\"\n}")
 	@PostMapping({ "products" })
 	public Product createProduct(@RequestBody ProductModel productModel)
 	{
@@ -139,17 +155,21 @@ public class CustomerReviewController
 		return mapper.map(prod, Product.class);
 	}
 	
-	
+	@ApiOperation(value = "Get product by id", notes = "Pass in product Id")
 	@GetMapping({ "products/{productId:\\d+}" })
-	public Product getProduct(@PathVariable final Long productId,
-			@RequestParam(required = false) final Double ratingFrom, @RequestParam(required = false) final Double ratingTo)
+	public Product getProduct(@PathVariable final Long productId)
 	{
-		ProductModel prod =   productDao.findOne(productId);
+		ProductModel prod =   productDao.findById(productId).orElse(null);
+		
+		if (prod == null)
+		{
+			throw new UserNotFoundException(productId);
+		}
 		ModelMapper mapper = new ModelMapper();
 		return mapper.map(prod, Product.class);
 	}
 	
-	
+	@ApiOperation(value = "Get all products")
 	@GetMapping({ "products" })
 	public List<Product> getProducts()
 	{
@@ -159,6 +179,8 @@ public class CustomerReviewController
 		return Arrays.asList(mapper.map(prodList, Product[].class));
 	}
 
+	
+	@ApiOperation(value = "Create a new new", notes = "Sample request body: \n\n\n{\n&nbsp;&nbsp;   \"name\": \"Tom\"\n}")
 	@PostMapping({ "users" })
 	public User createUser(@RequestBody UserModel user)
 	{
@@ -167,16 +189,21 @@ public class CustomerReviewController
 		return mapper.map(userModel, User.class);
 	}
 	
-
+	@ApiOperation(value = "Get user by id", notes = "Pass in user Id")
 	@GetMapping({ "users/{id}" })
 	public User getUser(@PathVariable("id") Long id)
 	{
-		UserModel userModel = userDao.findOne(id);
+		UserModel userModel = userDao.findById(id).orElse(null);
+		
+		if (userModel == null)
+		{
+			throw new UserNotFoundException(id);
+		}
 		ModelMapper mapper = new ModelMapper();
 		return mapper.map(userModel, User.class);
 	}
 	
-	
+	@ApiOperation(value = "Get all users")
 	@GetMapping({ "users" })
 	public List<User> getAllUser()
 	{
@@ -186,40 +213,23 @@ public class CustomerReviewController
 	}
 	
 
-	@DeleteMapping({ "reviews/{reviewId:\\d+}" })
-	public void deleteReview(@PathVariable final Long reviewId)
-	{
-//		customerReviewService.deleteCustomerReview(reviewId);
-		
-		/*
-		 * Read: Delete Not Working with JpaRepository
-		 * 
-		 * https://stackoverflow.com/questions/22688402/delete-not-working-with-jparepository
-		 */
-		customerReviewDao.delete(reviewId);		
-//		CustomerReviewModel customerReviewModel = customerReviewDao.findOne(reviewId);
-//		customerReviewDao.delete(customerReviewModel);
-	}
+//	@DeleteMapping({ "reviews/{reviewId:\\d+}" })
+//	public void deleteReview(@PathVariable final Long reviewId)
+//	{
+////		customerReviewService.deleteCustomerReview(reviewId);
+//		
+//		/*
+//		 * Read: Delete Not Working with JpaRepository
+//		 * 
+//		 * https://stackoverflow.com/questions/22688402/delete-not-working-with-jparepository
+//		 */
+//		customerReviewDao.deleteById(reviewId);		
+////		CustomerReviewModel customerReviewModel = customerReviewDao.findOne(reviewId);
+////		customerReviewDao.delete(customerReviewModel);
+//	}
+//	
 	
 	
-	
-	/*
-	 * Sean's code
-	 */
-	@PostMapping("myproducts")
-	public MyProductModel createMyProduct(@RequestBody MyProductModel myProduct) {
-		return myProductDao.save(myProduct);
-	}
-	
-	@GetMapping("myproducts")
-	public List<MyProductModel> getAllMyProducts(){
-		return myProductDao.findAll();
-	}
-	
-	@GetMapping("myproducts/{id}")
-	public MyProductModel getMyProductById(@PathVariable("id") Long id){
-		return myProductDao.findOne(id);
-	}
 	
 	
 	

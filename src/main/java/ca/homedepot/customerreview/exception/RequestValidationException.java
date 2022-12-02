@@ -10,6 +10,13 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ResponseStatus(value = HttpStatus.UNPROCESSABLE_ENTITY)
 public class RequestValidationException extends RuntimeException
 {
+	
+	@Override
+    public synchronized Throwable fillInStackTrace() {
+        return this;
+    }
+	
+	
 	public RequestValidationException(String message)
 	{
 		super(message);
