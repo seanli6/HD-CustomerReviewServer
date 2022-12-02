@@ -1,7 +1,7 @@
 steps:
 
   # Build the maven project, use ci-commons image that contains Maven and CI libraries [in target build we should not have have ref to common this way]
-  - name: 'maven:3.6.3-jdk-8-slim'
+  - name: 'maven:3.6.3-jdk-11-slim'
     id: 'build-step'
     entrypoint: 'mvn'
     args: ['clean','install', '-Dowasp=']
